@@ -7,6 +7,7 @@ using TareasMVC;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//Crear politica de usuarios y pasarsela a MVC
 var politicaUsuarios = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 
 // Add services to the container.
