@@ -15,8 +15,7 @@ namespace TareasMVC.Controllers
         private readonly IServicioUsuarios servicioUsuarios;
         private readonly IMapper mapper;
 
-        //No devuelve vistas, sino data en json
-        public TareasController(ApplicationDbContext context, 
+        public TareasController(ApplicationDbContext context,
             IServicioUsuarios servicioUsuarios,
             IMapper mapper)
         {
@@ -24,6 +23,7 @@ namespace TareasMVC.Controllers
             this.servicioUsuarios = servicioUsuarios;
             this.mapper = mapper;
         }
+
         [HttpGet]
         public async Task<ActionResult<List<TareaDTO>>> Get()
         {
@@ -42,7 +42,9 @@ namespace TareasMVC.Controllers
         {
             var usuarioId = servicioUsuarios.ObtenerUsuarioId();
 
-            var tarea = await context.Tareas.FirstOrDefaultAsync(t => t.Id == id &&
+            var tarea = await context.Tareas
+                .Include(t => t.Pasos.OrderBy(p => p.Orden))
+                .FirstOrDefaultAsync(t => t.Id == id &&
             t.UsuarioCreacionId == usuarioId);
 
             if (tarea is null)
@@ -51,6 +53,7 @@ namespace TareasMVC.Controllers
             }
 
             return tarea;
+
         }
 
         [HttpPost]
@@ -71,7 +74,7 @@ namespace TareasMVC.Controllers
             {
                 Titulo = titulo,
                 UsuarioCreacionId = usuarioId,
-                FechaCreacion = DateTime.Now,
+                FechaCreacion = DateTime.UtcNow,
                 Orden = ordenMayor + 1
             };
 
@@ -79,36 +82,6 @@ namespace TareasMVC.Controllers
             await context.SaveChangesAsync();
 
             return tarea;
-        }
-        [HttpPost("ordenar")]
-        public async Task<IActionResult> Ordenar([FromBody] int[] ids)
-        {
-            var usuarioId = servicioUsuarios.ObtenerUsuarioId();
-
-            var tareas = await context.Tareas
-                .Where(t => t.UsuarioCreacionId == usuarioId).ToListAsync();
-
-            var tareasId = tareas.Select(t => t.Id);
-
-            var idsTareasNoPertenecenAlUsuario = ids.Except(tareasId).ToList();
-
-            if (idsTareasNoPertenecenAlUsuario.Any())
-            {
-                return Forbid();
-            }
-
-            var tareasDiccionario = tareas.ToDictionary(x => x.Id);
-
-            for (int i = 0; i < ids.Length; i++)
-            {
-                var id = ids[i];
-                var tarea = tareasDiccionario[id];
-                tarea.Orden = i + 1;
-            }
-
-            await context.SaveChangesAsync();
-
-            return Ok();
         }
 
         [HttpPut("{id:int}")]
@@ -150,5 +123,36 @@ namespace TareasMVC.Controllers
             return Ok();
         }
 
+
+        [HttpPost("ordenar")]
+        public async Task<IActionResult> Ordenar([FromBody] int[] ids)
+        {
+            var usuarioId = servicioUsuarios.ObtenerUsuarioId();
+
+            var tareas = await context.Tareas
+                .Where(t => t.UsuarioCreacionId == usuarioId).ToListAsync();
+
+            var tareasId = tareas.Select(t => t.Id);
+
+            var idsTareasNoPertenecenAlUsuario = ids.Except(tareasId).ToList();
+
+            if (idsTareasNoPertenecenAlUsuario.Any())
+            {
+                return Forbid();
+            }
+
+            var tareasDiccionario = tareas.ToDictionary(x => x.Id);
+
+            for (int i = 0; i < ids.Length; i++)
+            {
+                var id = ids[i];
+                var tarea = tareasDiccionario[id];
+                tarea.Orden = i + 1;
+            }
+
+            await context.SaveChangesAsync();
+
+            return Ok();
+        }
     }
 }

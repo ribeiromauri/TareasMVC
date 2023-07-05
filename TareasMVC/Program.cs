@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using TareasMVC;
 using TareasMVC.Servicios;
 
@@ -15,6 +16,10 @@ var politicaUsuarios = new AuthorizationPolicyBuilder().RequireAuthenticatedUser
 builder.Services.AddControllersWithViews(opciones =>
 {
     opciones.Filters.Add(new AuthorizeFilter(politicaUsuarios));
+}).AddJsonOptions(opciones =>
+{
+    //cambio configuracion json para ignorar referencia ciclica en tarea - paso
+    opciones.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 });
 
 //configurar db context como un servicio y pasarle el connectionString 
